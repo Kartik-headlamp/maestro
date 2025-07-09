@@ -1,5 +1,4 @@
 name: Maestro Tests
-
 on:
   push:
     branches: [main]
@@ -20,11 +19,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Maestro CLI
-        run: curl -Ls "https://get.maestro.mobile.dev" | bash
-
-      - name: Run Maestro Tests - Android
-        run: maestro test ./Android_flows/
+      - name: Install Maestro CLI and Run Tests - Android
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          # Ensure Maestro is in PATH for this combined step
+          # The | bash pipes the install script, which often sets up PATH for the current shell.
+          # We can also explicitly source the profile if needed, but often combining works.
+          # If still "command not found", try adding the echo line from Solution 1 here as well.
+          maestro test ./Android_flows/ 
 
   ios_tests:
     runs-on: macos-latest
@@ -37,9 +39,8 @@ jobs:
           brew tap facebook/fb
           brew install facebook/fb/idb-companion
 
-      - name: Install Maestro CLI
-        run: curl -Ls "https://get.maestro.mobile.dev" | bash
-
-      - name: Run Maestro Tests - iOS
-        run: maestro test ./ios_flows/
-
+      - name: Install Maestro CLI and Run Tests - iOS
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          # Same as above, if issues, add the echo line.
+          maestro test ./ios_flows/
