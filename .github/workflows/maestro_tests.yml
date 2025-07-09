@@ -35,7 +35,6 @@ jobs:
 
       - name: Install Android APK
         run: |
-          # The APK is already in your 'apps' folder within the repository
           APK_PATH="./apps/cloud_app_testing.apk" # Direct path to your APK
           echo "Installing APK: $APK_PATH"
           adb install -r "$APK_PATH" # Install the APK on the running emulator
@@ -44,22 +43,23 @@ jobs:
       - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
-          # Add Maestro's bin directory to the GITHUB_PATH for subsequent steps
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
 
       - name: Run Maestro Tests - Android
-        run: maestro test ./Android_flows/ # Execute all Maestro flows in the Android_flows directory
+        run: maestro test ./Android_flows/
 
       - name: Upload Maestro Test Reports (Android)
         if: always() # Upload even if tests fail
-        uses: actions/upload-artifact@v3
+        # CHANGE THIS LINE FROM v3 TO v4
+        uses: actions/upload-artifact@v4 # <<< Changed to v4
         with:
           name: android-maestro-report
           path: maestro-output/report.xml # Default Maestro JUnit report path
 
       - name: Upload Maestro Screenshots (Android)
         if: always()
-        uses: actions/upload-artifact@v3
+        # CHANGE THIS LINE FROM v3 TO v4
+        uses: actions/upload-artifact@v4 # <<< Changed to v4
         with:
           name: android-maestro-screenshots
           path: maestro-output/screenshots # Default Maestro screenshot path
@@ -87,11 +87,9 @@ jobs:
         uses: futureware-tech/simulator-action@v2 # Action to start an iOS simulator
         with:
           model: 'iPhone 14 Pro' # Specify your desired iPhone model for the simulator
-          # You can add a specific iOS version if needed, e.g., os: '16.4'
 
       - name: Install iOS .app
         run: |
-          # The .app is already in your 'apps' folder within the repository
           APP_PATH="./apps/Headlamp Stage.app" # Direct path to your .app file
           echo "Installing App: $APP_PATH"
           xcrun simctl install Booted "$APP_PATH" # Install the .app on the running simulator
@@ -100,22 +98,23 @@ jobs:
       - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
-          # Add Maestro's bin directory to the GITHUB_PATH for subsequent steps
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
 
       - name: Run Maestro Tests - iOS
-        run: maestro test ./ios_flows/ # Execute all Maestro flows in the ios_flows directory
+        run: maestro test ./ios_flows/
 
       - name: Upload Maestro Test Reports (iOS)
         if: always()
-        uses: actions/upload-artifact@v3
+        # CHANGE THIS LINE FROM v3 TO v4
+        uses: actions/upload-artifact@v4 # <<< Changed to v4
         with:
           name: ios-maestro-report
           path: maestro-output/report.xml
 
       - name: Upload Maestro Screenshots (iOS)
         if: always()
-        uses: actions/upload-artifact@v3
+        # CHANGE THIS LINE FROM v3 TO v4
+        uses: actions/upload-artifact@v4 # <<< Changed to v4
         with:
           name: ios-maestro-screenshots
           path: maestro-output/screenshots
