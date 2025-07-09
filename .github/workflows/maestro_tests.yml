@@ -19,14 +19,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Maestro CLI and Run Tests - Android
+      - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
-          # Ensure Maestro is in PATH for this combined step
-          # The | bash pipes the install script, which often sets up PATH for the current shell.
-          # We can also explicitly source the profile if needed, but often combining works.
-          # If still "command not found", try adding the echo line from Solution 1 here as well.
-          maestro test ./Android_flows/ 
+          # This line is crucial: Add Maestro's bin directory to the GITHUB_PATH
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
+
+      - name: Run Maestro Tests - Android
+        # The 'maestro' command should now be found because of the previous step's PATH modification
+        run: maestro test ./Android_flows/
 
   ios_tests:
     runs-on: macos-latest
@@ -39,8 +40,12 @@ jobs:
           brew tap facebook/fb
           brew install facebook/fb/idb-companion
 
-      - name: Install Maestro CLI and Run Tests - iOS
+      - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
-          # Same as above, if issues, add the echo line.
-          maestro test ./ios_flows/
+          # This line is crucial: Add Maestro's bin directory to the GITHUB_PATH
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
+
+      - name: Run Maestro Tests - iOS
+        # The 'maestro' command should now be found
+        run: maestro test ./ios_flows/
