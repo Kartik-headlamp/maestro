@@ -1,43 +1,49 @@
-name: Maestro E2E Tests # A more descriptive name
+name: Maestro E2E Tests
 
 on:
   push:
     branches:
-      - main # Triggers on pushes to the main branch
+      - main
   pull_request:
     branches:
-      - main # Triggers on pull requests to the main branch
-  workflow_dispatch: # Allows manual triggering from the GitHub UI
+      - main
+  workflow_dispatch:
 
 jobs:
   android_tests:
-    runs-on: ubuntu-latest # GitHub-hosted runner for Android tests
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3 # Checks out your repository code
+        uses: actions/checkout@v3
 
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin' # A good choice for Java distribution
-          java-version: '17' # Specify Java 17, as required by Maestro
+          distribution: 'temurin'
+          java-version: '17'
 
       # --- Android Device Setup & App Installation ---
-      - name: Start Android Emulator
-        uses: reactivecircus/android-emulator-runner@v2 # Action to start an Android emulator
+      - name: Start Android Emulator and Install APK # Renamed step for clarity
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30 # Recommend a stable API level for your tests (e.g., 30, 33, 34)
+          api-level: 30
           target: default
           arch: x86_64
-          profile: Nexus 5 # A common emulator profile
-          emulator-build: 8000000 # Recommended for stability
-          disable-animations: true # Speeds up tests
+          profile: Nexus 5
+          emulator-build: 8000000
+          disable-animations: true
+          # THIS IS THE CRUCIAL CHANGE: The 'script' input for the emulator action
+          script: |
+            echo "Waiting for emulator to be ready..."
+            # Wait for emulator to fully boot
+            adb wait-for-device shell 'while [ -z "$(getprop sys.boot_completed)" ]; do sleep 1; done;'
+            echo "Emulator is ready!"
 
-      - name: Install Android APK
-        run: |
-          APK_PATH="./apps/cloud_app_testing.apk" # Direct path to your APK
-          echo "Installing APK: $APK_PATH"
-          adb install -r "$APK_PATH" # Install the APK on the running emulator
+            APK_PATH="./apps/cloud_app_testing.apk" # Direct path to your APK
+            echo "Installing APK: $APK_PATH"
+            adb install -r "$APK_PATH" # Install the APK on the running emulator
+
+      # Removed the separate "Install Android APK" step
 
       # --- Maestro CLI Setup & Test Execution ---
       - name: Install Maestro CLI
@@ -49,23 +55,22 @@ jobs:
         run: maestro test ./Android_flows/
 
       - name: Upload Maestro Test Reports (Android)
-        if: always() # Upload even if tests fail
-        # CHANGE THIS LINE FROM v3 TO v4
-        uses: actions/upload-artifact@v4 # <<< Changed to v4
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: android-maestro-report
-          path: maestro-output/report.xml # Default Maestro JUnit report path
+          path: maestro-output/report.xml
 
       - name: Upload Maestro Screenshots (Android)
         if: always()
-        # CHANGE THIS LINE FROM v3 TO v4
-        uses: actions/upload-artifact@v4 # <<< Changed to v4
+        uses: actions/upload-artifact@v4
         with:
           name: android-maestro-screenshots
-          path: maestro-output/screenshots # Default Maestro screenshot path
+          path: maestro-output/screenshots
 
+  # (ios_tests job remains unchanged for now, as the error was specific to Android emulator)
   ios_tests:
-    runs-on: macos-latest # macOS runner is required for iOS simulators
+    runs-on: macos-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -76,25 +81,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # --- iOS Prerequisites (for Maestro) ---
       - name: Install IDB Companion
         run: |
           brew tap facebook/fb
           brew install facebook/fb/idb-companion
 
-      # --- iOS Simulator Setup & App Installation ---
       - name: Start iOS Simulator
-        uses: futureware-tech/simulator-action@v2 # Action to start an iOS simulator
+        uses: futureware-tech/simulator-action@v2
         with:
-          model: 'iPhone 14 Pro' # Specify your desired iPhone model for the simulator
+          model: 'iPhone 14 Pro'
 
       - name: Install iOS .app
         run: |
-          APP_PATH="./apps/Headlamp Stage.app" # Direct path to your .app file
+          APP_PATH="./apps/Headlamp Stage.app"
           echo "Installing App: $APP_PATH"
-          xcrun simctl install Booted "$APP_PATH" # Install the .app on the running simulator
+          xcrun simctl install Booted "$APP_PATH"
 
-      # --- Maestro CLI Setup & Test Execution ---
       - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -105,16 +107,14 @@ jobs:
 
       - name: Upload Maestro Test Reports (iOS)
         if: always()
-        # CHANGE THIS LINE FROM v3 TO v4
-        uses: actions/upload-artifact@v4 # <<< Changed to v4
+        uses: actions/upload-artifact@v4
         with:
           name: ios-maestro-report
           path: maestro-output/report.xml
 
       - name: Upload Maestro Screenshots (iOS)
         if: always()
-        # CHANGE THIS LINE FROM v3 TO v4
-        uses: actions/upload-artifact@v4 # <<< Changed to v4
+        uses: actions/upload-artifact@v4
         with:
           name: ios-maestro-screenshots
           path: maestro-output/screenshots
