@@ -1,14 +1,71 @@
-name: Maestro Tests
+name: Maestro E2E Tests # A more descriptive name
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main # Triggers on pushes to the main branch
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - main # Triggers on pull requests to the main branch
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
   android_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # GitHub-hosted runner for Android tests
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3 # Checks out your repository code
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin' # A good choice for Java distribution
+          java-version: '17' # Specify Java 17, as required by Maestro
+
+      # --- Android Device Setup & App Installation ---
+      - name: Start Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2 # Action to start an Android emulator
+        with:
+          api-level: 30 # Recommend a stable API level for your tests (e.g., 30, 33, 34)
+          target: default
+          arch: x86_64
+          profile: Nexus 5 # A common emulator profile
+          emulator-build: 8000000 # Recommended for stability
+          disable-animations: true # Speeds up tests
+
+      - name: Install Android APK
+        run: |
+          # The APK is already in your 'apps' folder within the repository
+          APK_PATH="./apps/cloud_app_testing.apk" # Direct path to your APK
+          echo "Installing APK: $APK_PATH"
+          adb install -r "$APK_PATH" # Install the APK on the running emulator
+
+      # --- Maestro CLI Setup & Test Execution ---
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          # Add Maestro's bin directory to the GITHUB_PATH for subsequent steps
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
+
+      - name: Run Maestro Tests - Android
+        run: maestro test ./Android_flows/ # Execute all Maestro flows in the Android_flows directory
+
+      - name: Upload Maestro Test Reports (Android)
+        if: always() # Upload even if tests fail
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-maestro-report
+          path: maestro-output/report.xml # Default Maestro JUnit report path
+
+      - name: Upload Maestro Screenshots (Android)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-maestro-screenshots
+          path: maestro-output/screenshots # Default Maestro screenshot path
+
+  ios_tests:
+    runs-on: macos-latest # macOS runner is required for iOS simulators
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -19,33 +76,46 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Maestro CLI
-        run: |
-          curl -Ls "https://get.maestro.mobile.dev" | bash
-          # This line is crucial: Add Maestro's bin directory to the GITHUB_PATH
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
-
-      - name: Run Maestro Tests - Android
-        # The 'maestro' command should now be found because of the previous step's PATH modification
-        run: maestro test ./Android_flows/
-
-  ios_tests:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
+      # --- iOS Prerequisites (for Maestro) ---
       - name: Install IDB Companion
         run: |
           brew tap facebook/fb
           brew install facebook/fb/idb-companion
 
+      # --- iOS Simulator Setup & App Installation ---
+      - name: Start iOS Simulator
+        uses: futureware-tech/simulator-action@v2 # Action to start an iOS simulator
+        with:
+          model: 'iPhone 14 Pro' # Specify your desired iPhone model for the simulator
+          # You can add a specific iOS version if needed, e.g., os: '16.4'
+
+      - name: Install iOS .app
+        run: |
+          # The .app is already in your 'apps' folder within the repository
+          APP_PATH="./apps/Headlamp Stage.app" # Direct path to your .app file
+          echo "Installing App: $APP_PATH"
+          xcrun simctl install Booted "$APP_PATH" # Install the .app on the running simulator
+
+      # --- Maestro CLI Setup & Test Execution ---
       - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
-          # This line is crucial: Add Maestro's bin directory to the GITHUB_PATH
+          # Add Maestro's bin directory to the GITHUB_PATH for subsequent steps
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH 
 
       - name: Run Maestro Tests - iOS
-        # The 'maestro' command should now be found
-        run: maestro test ./ios_flows/
+        run: maestro test ./ios_flows/ # Execute all Maestro flows in the ios_flows directory
+
+      - name: Upload Maestro Test Reports (iOS)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-maestro-report
+          path: maestro-output/report.xml
+
+      - name: Upload Maestro Screenshots (iOS)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-maestro-screenshots
+          path: maestro-output/screenshots
